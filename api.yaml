@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: Examination Management Portal API
+  version: 1.0.0
+  description: >
+    JSON endpoints for the Examination Management Portal. Call /api/login first.
+    The server then sends a session cookie, which must be sent with every later request.
+servers:
+  - url: http://127.0.0.1:5000
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, example: anil@emp.com}
+        password: {type: string, example: examiner123}
+    LoginResult:
+      type: object
+      properties:
+        name: {type: string, example: Dr. Anil Sharma}
+        role: {type: string, enum: [admin, examiner, student]}
+    Error:
+      type: object
+      properties:
+        error: {type: string, example: Please log in first}
+    Exam:
+      type: object
+      properties:
+        id: {type: integer, example: 1}
+        name: {type: string, example: DSA Viva}
+        course: {type: string, example: CS201}
+        type: {type: string, enum: [Viva, Practical, Project Demo, Assessment]}
+        max_marks: {type: integer, example: 50}
+        status: {type: string, enum: [Draft, Slot Creation, Booking Open, Closed, Completed]}
+    Slot:
+      type: object
+      properties:
+        id: {type: integer, example: 1}
+        exam: {type: string, example: DSA Viva}
+        date: {type: string, format: date, example: 2026-11-18}
+        start: {type: string, example: "10:00"}
+        end: {type: string, example: "10:30"}
+        seats_left: {type: integer, example: 1}
+        status: {type: string, enum: [Available, Full, Cancelled, Completed]}
+    Booking:
+      type: object
+      properties:
+        id: {type: integer, example: 1}
+        exam: {type: string, example: DSA Viva}
+        date: {type: string, format: date, example: 2026-11-18}
+        status: {type: string, enum: [Booked, Cancelled, Completed]}
+        marks: {type: number, nullable: true, description: Total marks, only when published}
+    Summary:
+      type: object
+      properties:
+        courses: {type: integer}
+        exams: {type: integer}
+        examiners: {type: integer}
+        students: {type: integer}
+        slots: {type: integer}
+        bookings: {type: integer}
+  responses:
+    Unauthorized:
+      description: Not logged in
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Forbidden:
+      description: Logged in, but this role may not use the endpoint
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+paths:
+  /api/login:
+    post:
+      summary: Log in and start a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/LoginRequest'}
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LoginResult'}
+        '401':
+          description: Wrong email or password
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '403':
+          description: Account not allowed to log in (for example a pending examiner)
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/exams:
+    get:
+      summary: List all examinations
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: List of examinations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Exam'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/slots:
+    get:
+      summary: List all examination slots with seats left and status
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: List of slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Slot'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/bookings:
+    get:
+      summary: List the logged-in student's bookings and published marks
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Booking'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /api/summary:
+    get:
+      summary: Counts shown on the admin dashboard
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Counts
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Summary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
