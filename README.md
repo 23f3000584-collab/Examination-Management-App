@@ -27,17 +27,6 @@ The endpoints are described in `api.yaml` (OpenAPI 3.0), which is in the submiss
 
 Anyone who is not logged in gets 401, and a role that is not allowed gets 403.
 
-## Before you submit
-
-**1. Change the SECRET_KEY.** Flask uses this key to sign the cookie that remembers who is logged in. The code is public, so anyone who knows the key could make a login cookie for the admin. Make a random key:
-
-    python -c "import secrets; print(secrets.token_hex(32))"
-
-Paste the result into `app.py` in place of `PASTE-YOUR-OWN-LONG-RANDOM-KEY-HERE`, or set it as an environment variable called `SECRET_KEY` before you start the app.
-
-**2. Change the admin password.** The admin password `admin123` is written in this README, so anyone can use it. Log in as admin, then use the "Change admin password" form at the top of the admin page. The new password must have at least 6 characters.
-
-If you delete `emp.db` and start again, the admin password is reset to `admin123`, or to the value of the `ADMIN_PASSWORD` environment variable if you set one.
 
 ## Demo accounts
 
