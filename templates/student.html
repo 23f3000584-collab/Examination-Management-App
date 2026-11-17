@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Student dashboard</h3>
+  <a href="{{ url_for('student_profile') }}">Edit my profile</a>
+</div>
+
+<!-- SEARCH AND FILTER -->
+<h5>Available examinations (open for booking now)</h5>
+<table class="table table-sm bg-white">
+  <tr><th>Name</th><th>Course</th><th>Max marks</th><th>Booking</th><th>Status</th></tr>
+  {% for e in open_exams %}
+  <tr><td>{{ e.name }}</td><td>{{ e.course.name }}</td><td>{{ e.max_marks }}</td>
+      <td>{{ e.book_start }} to {{ e.book_end }}</td><td>{{ e.status }}</td></tr>
+  {% else %}
+  <tr><td colspan="5">No examinations are open for booking right now.</td></tr>
+  {% endfor %}
+</table>
+
+<h5>Search and filter examinations</h5>
+<form method="get" class="row g-2 mb-2 bg-white p-2">
+  <div class="col-md-4"><input class="form-control" name="q" value="{{ q }}" placeholder="Search by examination name"></div>
+  <div class="col-md-3">
+    <select class="form-select" name="exam_type">
+      <option value="">All types</option>
+      {% for t in exam_types %}<option {{ 'selected' if t == exam_type else '' }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" name="exam_status">
+      <option value="">All statuses</option>
+      {% for s in exam_statuses %}<option {{ 'selected' if s == exam_status else '' }}>{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Search</button></div>
+</form>
+<table class="table table-sm bg-white">
+  <tr><th>Name</th><th>Course</th><th>Type</th><th>Duration</th><th>Max marks</th><th>Slot creation</th><th>Booking</th><th>Status</th></tr>
+  {% for e in exams %}
+  <tr>
+    <td>{{ e.name }}</td><td>{{ e.course.name }}</td><td>{{ e.exam_type }}</td><td>{{ e.duration }} min</td>
+    <td>{{ e.max_marks }}</td><td>{{ e.slot_start }} to {{ e.slot_end }}</td>
+    <td>{{ e.book_start }} to {{ e.book_end }}</td><td>{{ e.status }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="8">No examinations match your search.</td></tr>
+  {% endfor %}
+</table>
+
+<!-- AVAILABLE SLOTS -->
+<h5>Available slots</h5>
+<table class="table table-sm bg-white">
+  <tr><th>Examination</th><th>Examiner</th><th>Date</th><th>Time</th><th>Seats left</th><th>Action</th></tr>
+  {% for s in available_slots %}
+  <tr>
+    <td>{{ s.exam.name }}</td><td>{{ s.examiner.name }}</td><td>{{ s.slot_date }}</td>
+    <td>{{ s.start_time.strftime('%H:%M') }} to {{ s.end_time.strftime('%H:%M') }}</td>
+    <td>{{ seats_left(s) }}</td>
+    <td>
+      <form method="post" action="{{ url_for('student_book', slot_id=s.id) }}">
+        <button class="btn btn-sm btn-success">Book slot</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No slots are open for booking right now.</td></tr>
+  {% endfor %}
+</table>
+
+<!-- UPCOMING -->
+<h5>Upcoming examinations</h5>
+<table class="table table-sm bg-white">
+  <tr><th>Examination</th><th>Date</th><th>Time</th><th>Examiner</th></tr>
+  {% for b in upcoming %}
+  <tr>
+    <td>{{ b.slot.exam.name }}</td><td>{{ b.slot.slot_date }}</td>
+    <td>{{ b.slot.start_time.strftime('%H:%M') }}</td><td>{{ b.slot.examiner.name }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="4">You have no upcoming examinations.</td></tr>
+  {% endfor %}
+</table>
+
+<!-- BOOKING HISTORY -->
+<h5>My bookings and history</h5>
+<table class="table table-sm bg-white">
+  <tr><th>Examination</th><th>Date and time</th><th>Status</th><th>Action</th></tr>
+  {% for b in my_bookings %}
+  <tr>
+    <td>{{ b.slot.exam.name }}</td>
+    <td>{{ b.slot.slot_date }} {{ b.slot.start_time.strftime('%H:%M') }}</td>
+    <td>{{ b.status }}</td>
+    <td>
+      {% if b.status == 'Booked' and today <= b.slot.exam.book_end %}
+      <form method="post" action="{{ url_for('student_cancel', booking_id=b.id) }}">
+        <button class="btn btn-sm btn-outline-danger">Cancel booking</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="4">You have no bookings yet.</td></tr>
+  {% endfor %}
+</table>
+
+<!-- RESULTS -->
+<h5>Published results</h5>
+<table class="table table-sm bg-white">
+  <tr><th>Examination</th><th>Marks</th><th>Remarks</th></tr>
+  {% for b in results %}
+  <tr>
+    <td>{{ b.slot.exam.name }}</td>
+    <td>{{ b.evaluation.total }} / {{ b.slot.exam.max_marks }}</td>
+    <td>{{ b.evaluation.remarks }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="3">No published results yet.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

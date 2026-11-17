@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3 class="mb-3">My profile</h3>
+<form method="post" class="bg-white p-3 col-md-6">
+  <label class="form-label">Full name</label>
+  <input class="form-control mb-2" name="name" value="{{ me.name }}" required>
+  <label class="form-label">Phone</label>
+  <input class="form-control mb-2" name="phone" value="{{ me.phone }}">
+  <label class="form-label">Department</label>
+  <input class="form-control mb-2" name="department" value="{{ me.department }}">
+  <label class="form-label">New password (leave blank to keep the same)</label>
+  <input class="form-control mb-3" type="password" name="new_password">
+  <button class="btn btn-primary">Save profile</button>
+  <a class="btn btn-secondary" href="{{ url_for('student_page') }}">Back</a>
+</form>
+{% endblock %}

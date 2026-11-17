@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3 class="mb-3">Examiner dashboard</h3>
+
+<table class="table table-bordered text-center bg-white">
+  <tr><th>Assigned exams</th><th>Slots created</th><th>Students booked</th><th>Pending evaluations</th></tr>
+  <tr><td>{{ assigned_exams|length }}</td><td>{{ my_slots|length }}</td><td>{{ my_bookings|length }}</td><td>{{ pending }}</td></tr>
+</table>
+
+<h5>My assigned examinations</h5>
+<table class="table table-sm bg-white">
+  <tr><th>Name</th><th>Course</th><th>Type</th><th>Slot creation</th><th>Booking</th><th>Status</th></tr>
+  {% for e in assigned_exams %}
+  <tr>
+    <td>{{ e.name }}</td><td>{{ e.course.code }}</td><td>{{ e.exam_type }}</td>
+    <td>{{ e.slot_start }} to {{ e.slot_end }}</td><td>{{ e.book_start }} to {{ e.book_end }}</td><td>{{ e.status }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No examinations assigned to you yet.</td></tr>
+  {% endfor %}
+</table>
+
+<h5>{{ 'Edit slot' if edit_slot else 'Create slot' }}</h5>
+<form method="post" action="{{ url_for('examiner_slot_save') }}" class="row g-2 mb-4 bg-white p-2">
+  <input type="hidden" name="id" value="{{ edit_slot.id if edit_slot else '' }}">
+  <div class="col-md-3">
+    {% if edit_slot %}
+      <input class="form-control" value="{{ edit_slot.exam.name }}" disabled>
+    {% else %}
+      <select class="form-select" name="exam_id">
+        {% for e in assigned_exams %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}
+      </select>
+    {% endif %}
+  </div>
+  <div class="col-md-2"><input class="form-control" type="date" name="slot_date" value="{{ edit_slot.slot_date if edit_slot else '' }}" required></div>
+  <div class="col-md-2"><input class="form-control" type="time" name="start_time" value="{{ edit_slot.start_time.strftime('%H:%M') if edit_slot else '' }}" required></div>
+  <div class="col-md-2"><input class="form-control" type="time" name="end_time" value="{{ edit_slot.end_time.strftime('%H:%M') if edit_slot else '' }}" required></div>
+  <div class="col-md-1"><input class="form-control" type="number" min="1" name="capacity" placeholder="Seats" value="{{ edit_slot.capacity if edit_slot else '' }}" required></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Save slot</button></div>
+  {% if edit_slot %}
+  <div class="col-12"><a href="{{ url_for('examiner_page') }}">Cancel edit</a></div>
+  {% endif %}
+</form>
+
+<h5>My slots</h5>
+<table class="table table-sm bg-white">
+  <tr><th>Examination</th><th>Date</th><th>Time</th><th>Booked / seats</th><th>Status</th><th>Action</th></tr>
+  {% for s in my_slots %}
+  <tr>
+    <td>{{ s.exam.name }}</td><td>{{ s.slot_date }}</td>
+    <td>{{ s.start_time.strftime('%H:%M') }} to {{ s.end_time.strftime('%H:%M') }}</td>
+    <td>{{ seats_taken(s) }} / {{ s.capacity }}</td>
+    <td>{{ slot_status(s) }}</td>
+    <td>
+      <a href="{{ url_for('examiner_page', edit_slot=s.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('examiner_slot_delete', slot_id=s.id) }}" class="d-inline">
+        <button class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No slots yet.</td></tr>
+  {% endfor %}
+</table>
+
+<h5>Booked students</h5>
+<table class="table table-sm bg-white">
+  <tr><th>Student</th><th>Email</th><th>Examination</th><th>Date and time</th><th>Status</th><th>Action</th></tr>
+  {% for b in my_bookings %}
+  <tr>
+    <td>{{ b.student.name }}</td><td>{{ b.student.email }}</td><td>{{ b.slot.exam.name }}</td>
+    <td>{{ b.slot.slot_date }} {{ b.slot.start_time.strftime('%H:%M') }}</td><td>{{ b.status }}</td>
+    <td>
+      <a class="btn btn-sm btn-primary" href="{{ url_for('examiner_evaluate', booking_id=b.id) }}">
+        {{ 'Edit marks' if b.status == 'Completed' else 'Evaluate' }}
+      </a>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No students have booked your slots yet.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3 class="mb-3">Admin dashboard</h3>
+
+<table class="table table-bordered text-center bg-white">
+  <tr><th>Courses</th><th>Examinations</th><th>Examiners</th><th>Students</th><th>Slots</th><th>Bookings</th></tr>
+  <tr><td>{{ stats.courses }}</td><td>{{ stats.exams }}</td><td>{{ stats.examiners }}</td>
+      <td>{{ stats.students }}</td><td>{{ stats.slots }}</td><td>{{ stats.bookings }}</td></tr>
+</table>
+
+<form method="get" class="row g-2 mb-4">
+  <div class="col-md-6">
+    <input class="form-control" name="q" value="{{ q }}" placeholder="Search students, examiners, examinations or bookings by name or ID">
+  </div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Search</button></div>
+  <div class="col-md-2"><a class="btn btn-outline-secondary w-100" href="{{ url_for('admin_page') }}">Show all</a></div>
+</form>
+
+<form method="post" action="{{ url_for('admin_password') }}" class="row g-2 mb-4 bg-white p-2">
+  <div class="col-md-4"><input class="form-control" type="password" name="new_password" placeholder="New admin password (at least 6 characters)" required></div>
+  <div class="col-md-2"><button class="btn btn-outline-primary w-100">Change admin password</button></div>
+</form>
+
+<!-- COURSES -->
+<h5>Courses</h5>
+<table class="table table-sm bg-white">
+  <tr><th>ID</th><th>Code</th><th>Name</th><th>Status</th><th>Action</th></tr>
+  {% for c in courses %}
+  <tr>
+    <td>{{ c.id }}</td><td>{{ c.code }}</td><td>{{ c.name }}</td><td>{{ c.status }}</td>
+    <td>
+      <a href="{{ url_for('admin_page', edit_course=c.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('admin_course_delete', course_id=c.id) }}" class="d-inline">
+        <button class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5">No courses yet.</td></tr>
+  {% endfor %}
+</table>
+<form method="post" action="{{ url_for('admin_course_save') }}" class="row g-2 mb-4 bg-white p-2">
+  <input type="hidden" name="id" value="{{ edit_course.id if edit_course else '' }}">
+  <div class="col-md-2"><input class="form-control" name="code" placeholder="Code e.g. CS201" value="{{ edit_course.code if edit_course else '' }}" required></div>
+  <div class="col-md-3"><input class="form-control" name="name" placeholder="Course name" value="{{ edit_course.name if edit_course else '' }}" required></div>
+  <div class="col-md-3"><input class="form-control" name="description" placeholder="Description" value="{{ edit_course.description if edit_course else '' }}"></div>
+  <div class="col-md-2">
+    <select class="form-select" name="status">
+      {% for s in ['Active', 'Inactive'] %}
+      <option {{ 'selected' if edit_course and edit_course.status == s else '' }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">{{ 'Update course' if edit_course else 'Add course' }}</button></div>
+</form>
+
+<!-- EXAMINATIONS -->
+<h5>Examinations</h5>
+<table class="table table-sm bg-white">
+  <tr><th>ID</th><th>Name</th><th>Course</th><th>Type</th><th>Duration</th><th>Max marks</th>
+      <th>Slot creation</th><th>Booking</th><th>Status</th><th>Action</th></tr>
+  {% for e in exams %}
+  <tr>
+    <td>{{ e.id }}</td><td>{{ e.name }}</td><td>{{ e.course.code }}</td><td>{{ e.exam_type }}</td>
+    <td>{{ e.duration }} min</td><td>{{ e.max_marks }}</td>
+    <td>{{ e.slot_start }} to {{ e.slot_end }}</td><td>{{ e.book_start }} to {{ e.book_end }}</td>
+    <td>{{ e.status }}</td>
+    <td>
+      <a href="{{ url_for('admin_page', edit_exam=e.id) }}">Edit</a> |
+      <a href="{{ url_for('admin_page', rubrics=e.id) }}">Rubrics</a>
+      <form method="post" action="{{ url_for('admin_exam_delete', exam_id=e.id) }}" class="d-inline">
+        <button class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="10">No examinations match.</td></tr>
+  {% endfor %}
+</table>
+
+<form method="post" action="{{ url_for('admin_exam_save') }}" class="row g-2 mb-4 bg-white p-2">
+  <h6 class="col-12">{{ 'Edit examination' if edit_exam else 'Add examination' }}</h6>
+  <input type="hidden" name="id" value="{{ edit_exam.id if edit_exam else '' }}">
+  <div class="col-md-3">
+    <select class="form-select" name="course_id" required>
+      {% for c in courses %}
+      <option value="{{ c.id }}" {{ 'selected' if edit_exam and edit_exam.course_id == c.id else '' }}>{{ c.code }} {{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3"><input class="form-control" name="name" placeholder="Examination name" value="{{ edit_exam.name if edit_exam else '' }}" required></div>
+  <div class="col-md-2">
+    <select class="form-select" name="exam_type">
+      {% for t in exam_types %}
+      <option {{ 'selected' if edit_exam and edit_exam.exam_type == t else '' }}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><input class="form-control" type="number" min="1" name="duration" placeholder="Minutes" value="{{ edit_exam.duration if edit_exam else '' }}" required></div>
+  <div class="col-md-2"><input class="form-control" type="number" min="1" name="max_marks" placeholder="Max marks" value="{{ edit_exam.max_marks if edit_exam else '' }}" required></div>
+  {% for field, label in [('slot_start', 'Slot creation from'), ('slot_end', 'Slot creation until'), ('book_start', 'Booking from'), ('book_end', 'Booking until (also cancel deadline)')] %}
+  <div class="col-md-3">
+    <label class="form-label small mb-0">{{ label }}</label>
+    <input class="form-control" type="date" name="{{ field }}" value="{{ edit_exam[field] if edit_exam else '' }}" required>
+  </div>
+  {% endfor %}
+  <div class="col-12 d-flex flex-wrap gap-4">
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="slot_creation_open" id="sco" {{ 'checked' if edit_exam and edit_exam.slot_creation_open else '' }}><label class="form-check-label" for="sco">Examiners can create slots (open)</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="booking_open" id="bko" {{ 'checked' if edit_exam and edit_exam.booking_open else '' }}><label class="form-check-label" for="bko">Students can book (open)</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="completed" id="cmp" {{ 'checked' if edit_exam and edit_exam.status == 'Completed' else '' }}><label class="form-check-label" for="cmp">Examination completed</label></div>
+  </div>
+  <div class="col-12">
+    <label class="form-label small mb-0">Assigned examiners</label><br>
+    {% for ex in approved_examiners %}
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="examiner_ids" value="{{ ex.id }}" id="ex{{ ex.id }}" {{ 'checked' if ex.id in assigned_ids else '' }}>
+      <label class="form-check-label" for="ex{{ ex.id }}">{{ ex.name }}</label>
+    </div>
+    {% else %}
+    <span class="text-muted">No approved examiners yet.</span>
+    {% endfor %}
+  </div>
+  <div class="col-12 mt-2"><button class="btn btn-primary">{{ 'Update examination' if edit_exam else 'Add examination' }}</button></div>
+</form>
+
+<!-- RUBRICS -->
+{% if rubric_exam %}
+<h5>Rubric for {{ rubric_exam.name }}</h5>
+<table class="table table-sm bg-white">
+  <tr><th>ID</th><th>Criterion</th><th>Max marks</th><th>Weightage</th><th>Description</th><th>Action</th></tr>
+  {% for r in rubric_exam.rubrics %}
+  <tr>
+    <td>{{ r.id }}</td><td>{{ r.criterion }}</td><td>{{ r.max_marks }}</td><td>{{ r.weightage }}</td><td>{{ r.description }}</td>
+    <td>
+      <a href="{{ url_for('admin_page', rubrics=rubric_exam.id, edit_rubric=r.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('admin_rubric_delete', rubric_id=r.id) }}" class="d-inline"><button class="btn btn-sm btn-danger">Delete</button></form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No criteria yet.</td></tr>
+  {% endfor %}
+</table>
+{% set er = edit_rubric %}
+<form method="post" action="{{ url_for('admin_rubric_save') }}" class="row g-2 mb-4 bg-white p-2">
+  <h6 class="col-12">{{ 'Edit criterion' if er else 'Add criterion' }}</h6>
+  <input type="hidden" name="id" value="{{ er.id if er else '' }}">
+  <input type="hidden" name="exam_id" value="{{ rubric_exam.id }}">
+  <div class="col-md-3"><input class="form-control" name="criterion" placeholder="Criterion e.g. Problem solving" value="{{ er.criterion if er else '' }}" required></div>
+  <div class="col-md-2"><input class="form-control" type="number" min="1" name="max_marks" placeholder="Max marks" value="{{ er.max_marks if er else '' }}" required></div>
+  <div class="col-md-2"><input class="form-control" type="number" step="0.1" min="0.1" name="weightage" placeholder="Weightage" value="{{ er.weightage if er else '1' }}" required></div>
+  <div class="col-md-3"><input class="form-control" name="description" placeholder="Description" value="{{ er.description if er else '' }}"></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">{{ 'Update' if er else 'Add' }}</button></div>
+</form>
+{% endif %}
+
+<!-- EXAMINERS -->
+<h5>Examiners</h5>
+<form method="post" action="{{ url_for('admin_examiner_add') }}" class="row g-2 mb-2 bg-white p-2">
+  <div class="col-md-2"><input class="form-control" name="name" placeholder="Full name" required></div>
+  <div class="col-md-2"><input class="form-control" type="email" name="email" placeholder="Email" required></div>
+  <div class="col-md-2"><input class="form-control" name="password" placeholder="Password" required></div>
+  <div class="col-md-2"><input class="form-control" name="phone" placeholder="Phone"></div>
+  <div class="col-md-2"><input class="form-control" name="department" placeholder="Department"></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Add examiner</button></div>
+</form>
+<table class="table table-sm bg-white">
+  <tr><th>ID</th><th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Action</th></tr>
+  {% for u in examiners %}
+  <tr>
+    <td>{{ u.id }}</td><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ u.department }}</td><td>{{ u.status }}</td>
+    <td>
+      <form method="post" action="{{ url_for('admin_examiner_status', user_id=u.id) }}" class="d-inline">
+        {% if u.status == 'approved' %}
+          <button name="action" value="deactivate" class="btn btn-sm btn-warning">Deactivate</button>
+        {% elif u.status == 'deactivated' %}
+          <button name="action" value="activate" class="btn btn-sm btn-success">Activate</button>
+        {% else %}
+          <button name="action" value="approve" class="btn btn-sm btn-success">Approve</button>
+        {% endif %}
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No examiners match.</td></tr>
+  {% endfor %}
+</table>
+
+<!-- STUDENTS -->
+<h5>Students</h5>
+<table class="table table-sm bg-white">
+  <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Department</th></tr>
+  {% for u in students %}
+  <tr><td>{{ u.id }}</td><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ u.phone }}</td><td>{{ u.department }}</td></tr>
+  {% else %}
+  <tr><td colspan="5">No students match.</td></tr>
+  {% endfor %}
+</table>
+
+<!-- SLOTS -->
+<h5>All examination slots</h5>
+<table class="table table-sm bg-white">
+  <tr><th>ID</th><th>Examination</th><th>Date</th><th>Time</th><th>Booked / seats</th><th>Status</th><th>Examiner</th></tr>
+  {% for s in slots %}
+  <tr>
+    <td>{{ s.id }}</td><td>{{ s.exam.name }}</td><td>{{ s.slot_date }}</td>
+    <td>{{ s.start_time.strftime('%H:%M') }} to {{ s.end_time.strftime('%H:%M') }}</td>
+    <td>{{ seats_taken(s) }} / {{ s.capacity }}</td>
+    <td>{{ slot_status(s) }}{% if not s.cancelled %}<form method="post" action="{{ url_for('admin_slot_cancel', slot_id=s.id) }}" class="mt-1"><button class="btn btn-sm btn-outline-danger">Cancel slot</button></form>{% endif %}</td>
+    <td>
+      <form method="post" action="{{ url_for('admin_slot_examiner', slot_id=s.id) }}" class="d-flex gap-1">
+        <select class="form-select form-select-sm" name="examiner_id">
+          {% for ex in approved_examiners %}
+          <option value="{{ ex.id }}" {{ 'selected' if ex.id == s.examiner_id else '' }}>{{ ex.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-sm btn-outline-primary">Change</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7">No slots yet.</td></tr>
+  {% endfor %}
+</table>
+
+<!-- BOOKINGS -->
+<h5>Bookings</h5>
+<table class="table table-sm bg-white">
+  <tr><th>ID</th><th>Student</th><th>Examination</th><th>Date and time</th><th>Status</th><th>Reschedule to</th></tr>
+  {% for b in bookings %}
+  <tr>
+    <td>{{ b.id }}</td><td>{{ b.student.name }}</td><td>{{ b.slot.exam.name }}</td>
+    <td>{{ b.slot.slot_date }} {{ b.slot.start_time.strftime('%H:%M') }}</td><td>{{ b.status }}</td>
+    <td>
+      {% if b.status == 'Booked' %}
+      <form method="post" action="{{ url_for('admin_booking_reschedule', booking_id=b.id) }}" class="d-flex gap-1">
+        <select class="form-select form-select-sm" name="new_slot_id">
+          {% for o in slots if o.exam_id == b.slot.exam_id and o.id != b.slot_id %}
+          <option value="{{ o.id }}">{{ o.slot_date }} {{ o.start_time.strftime('%H:%M') }} (seats left {{ seats_left(o) }})</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-sm btn-outline-primary">Move</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No bookings match.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
